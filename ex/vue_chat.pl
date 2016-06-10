@@ -11,10 +11,10 @@ websocket '/channel' => sub {
   $c->inactivity_timeout(3600);
 
   my $pubsub = $c->pg->pubsub;
-  my $events = $c->multiplex->attach;
+  my $multiplex = $c->multiplex;
 
   my %channels;
-  $events->on(sub => sub {
+  $multiplex->on(subscribe => sub {
     my (undef, $channel) = @_;
     return if exists $channels{$channel};
     $channels{$channel} = $pubsub->listen($channel => sub {
@@ -23,18 +23,18 @@ websocket '/channel' => sub {
     });
   });
 
-  $events->on(msg => sub {
+  $multiplex->on(message => sub {
     my (undef, $channel, $payload) = @_;
     $pubsub->notify($channel => $payload);
   });
 
-  $events->on(uns => sub {
+  $multiplex->on(unsubscribe => sub {
     my (undef, $channel) = @_;
     return unless my $cb = delete $channels{$channel};
     $pubsub->unlisten($channel => $cb);
   });
 
-  $c->on(finish => sub {
+  $multiplex->on(finish => sub {
     $pubsub->unlisten($_ => $channels{$_}) for keys %channels;
   });
 };
@@ -44,70 +44,58 @@ app->start;
 __DATA__
 
 @@ chat.html.ep
+
+<!DOCTYPE html>
+<html>
+<head>
+  %= stylesheet 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css'
+</head>
+<body>
+
+<div id="chat" class="container">
+  <div class="row">
+    <div class="col-md-3">
+      <ul class="list-group">
+        <li v-for="c in channels" class="list-group-item" @click.prevent="select_channel(c)">
+          <span class="badge">{{c.unread}}</span>
+          <button type="button" @click.prevent="remove_channel(c)">&times;</button>
+          {{c.name}}
+        </li>
+        <li class="list-group-item">
+          Add Channel: <form @submit.prevent="add_channel"><input v-model="new_channel"></form>
+        </li>
+      </ul>
+    </div>
+    <div class="col-md-9">
+      <div class="page-header" v-if="current.name"><h1>Chatting on {{current.name}}</h1></div>
+      <div id="log"><p v-for="m in current.messages">{{m.username}}: {{m.message}}</p></div>
+    </div>
+    <div class="navbar-fixed-bottom">
+      <div class="container">
+        <div class="col-md-3">
+          <div class="input-group">
+            <div class="input-group-addon">Username</div>
+            <input class="form-control" v-model="username">
+          </div>
+        </div>
+        <div class="col-md-9">
+          <form class="form" @submit.prevent="send">
+            <div class="form-group">
+              <div class="input-group">
+                <div class="input-group-addon">Send</div>
+                <input class="form-control" v-model="message">
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 %= javascript 'https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.20/vue.js'
 %= javascript 'https://cdn.rawgit.com/sockjs/websocket-multiplex/master/multiplex_client.js'
-%= stylesheet begin
-  .chat-pane {
-    border-style: solid;
-    border-color: black;
-    border-width: thin;
-    padding: 5px;
-  }
-  form {
-    display: inline;
-  }
-% end
-<div id="chat">
-  Username: <input v-model="username"><br>
-  Add Channel: <form @submit.prevent="add_channel"><input v-model="new_channel"></form></br>
-  <template v-for="name in channels">
-    <chat-pane :name="name"></chat-pane>
-  </template>
-</div>
-<template id="chat-template">
-  <div class="chat-pane">
-    <span>
-      Send to {{name}}: <form @submit.prevent="send"><input v-model="current"></form>
-      <button @click.prevent="close">x</button>
-    </span>
-    <div id="log"><p v-for="m in messages">{{m.username}}: {{m.message}}</p></div>
-  </div>
-</template>
-
 <script>
-  Vue.component('chat-pane', {
-    template: '#chat-template',
-    data: function() { return {
-      current: '',
-      messages: [],
-    }},
-    props: {
-      name: {
-        type: String,
-        required: true,
-      }
-    },
-    computed: {
-      socket: function() {
-        var self = this;
-        var socket = self.$parent.multiplexer.channel(self.name);
-        socket.onmessage = function (e) { self.messages.push(JSON.parse(e.data)) };
-        return socket;
-      },
-    },
-    methods: {
-      close: function(){
-        this.socket.close();
-        this.$parent.channels.$remove(this.name);
-      },
-      send: function() {
-        this.socket.send(JSON.stringify({username: this.$parent.username, message: this.current}));
-        this.current = '';
-      },
-    },
-    ready: function() { this.socket },
-  });
-
   var vm = new Vue({
     el: '#chat',
     data: {
@@ -115,6 +103,8 @@ __DATA__
       new_channel: '',
       url: '<%= url_for('channel')->to_abs %>',
       channels: [],
+      current: {},
+      message: '',
     },
     computed: {
       ws: function() {
@@ -126,10 +116,35 @@ __DATA__
     },
     methods: {
       add_channel: function() {
-        this.channels.push(this.new_channel);
+        var name = this.new_channel;
         this.new_channel = '';
+        var channel = {'name': name, messages: [], unread: 0};
+        var socket = this.multiplexer.channel(name);
+        var self = this;
+        socket.onmessage = function (e) {
+          channel.messages.push(JSON.parse(e.data));
+          if ( channel !== self.current ) { channel.unread++ }
+        };
+        channel.socket = socket;
+        this.channels.push(channel);
+        this.current = channel;
+      },
+      remove_channel: function(channel) {
+        channel.socket.close();
+        this.channels.$remove(channel);
+      },
+      select_channel: function(channel) {
+        this.current = channel;
+        channel.unread = 0;
+      },
+      send: function() {
+        this.current.socket.send(JSON.stringify({username: this.username, message: this.message}));
+        this.message = '';
       },
     },
-    ready: function() { this.ws; }
+    ready: function() { this.ws },
   });
 </script>
+
+</body<
+</html>

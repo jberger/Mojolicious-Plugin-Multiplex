@@ -1,8 +1,11 @@
 use Mojolicious::Lite;
 use Mojo::Pg;
 
+die 'set MULTIPLEX_PG_URL to use this demo'
+  unless my $url = $ENV{MULTIPLEX_PG_URL};
+
 plugin 'Multiplex';
-helper pg => sub { state $pg = Mojo::Pg->new('postgresql://hubble:hubble@/hubble') };
+helper pg => sub { state $pg = Mojo::Pg->new($url) };
 
 get '/' => 'chat';
 

@@ -12,7 +12,7 @@ sub register {
     my $tx = $c->tx;
     return undef unless $tx->is_websocket;
     $c->rendered(101) unless $tx->established;
-    return $c->stash->{'multiplex.instance'} ||= Mojo::Transaction::WebSocket::Multiplex->new($tx);
+    return $c->stash->{'multiplex.instance'} ||= Mojo::Transaction::WebSocket::Multiplex->new(tx => $tx);
   });
 }
 

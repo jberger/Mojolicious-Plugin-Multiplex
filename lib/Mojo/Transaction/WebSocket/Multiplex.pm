@@ -2,9 +2,10 @@ package Mojo::Transaction::WebSocket::Multiplex;
 
 use Mojo::Base 'Mojo::EventEmitter';
 
+use Carp ();
 use Scalar::Util ();
 
-has 'tx';
+has tx => sub { Carp::croak 'tx is required' };
 
 my %map = (
   sub => 'subscribe',
@@ -13,9 +14,9 @@ my %map = (
 );
 
 sub new {
-  my ($class, $tx) = @_;
+  my $self = shift->SUPER::new(@_);
+  my $tx = $self->tx;
   return undef unless $tx->is_websocket;
-  my $self = $class->SUPER::new(tx => $tx);
   Scalar::Util::weaken $self->{tx};
 
   $tx->on(text => sub {

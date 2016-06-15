@@ -1,4 +1,4 @@
-package Mojo::WebSocket::Multiplex;
+package Mojo::Transaction::WebSocket::Multiplex;
 
 use Mojo::Base 'Mojo::EventEmitter';
 
@@ -13,14 +13,13 @@ my %map = (
 );
 
 sub new {
-  my ($class, $c) = @_;
-  my $tx = $c->tx;
+  my ($class, $tx) = @_;
   return undef unless $tx->is_websocket;
-  my $self  = $class->SUPER::new(tx => $tx);
+  my $self = $class->SUPER::new(tx => $tx);
   Scalar::Util::weaken $self->{tx};
 
-  $c->on(text => sub {
-    my ($c, $bytes) = @_;
+  $tx->on(text => sub {
+    my ($tx, $bytes) = @_;
     my ($type, $channel, $payload) = split /,/, $bytes, 3;
 
     my $e = $map{$type};

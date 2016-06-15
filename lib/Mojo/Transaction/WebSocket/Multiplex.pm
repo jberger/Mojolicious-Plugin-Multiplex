@@ -37,3 +37,5 @@ sub send {
   $tx->send("msg,$chan,$payload", $cb ? sub { $self->$cb() } : ());
 }
 
+1;
+

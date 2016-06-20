@@ -1,6 +1,8 @@
 This module is copyright (c) 2016 Joel Berger
 This module is licensed under the same terms as Perl 5
 
+The original protocol (extended below) was proposed by SockJS, seen here: https://github.com/sockjs/websocket-multiplex
+
 The underlying protocol is quite simple. Each message is a string consisting of three comma separated parts: type, topic and payload. There are three valid message types:
 
 sub - expresses a will to subscribe to a given topic.

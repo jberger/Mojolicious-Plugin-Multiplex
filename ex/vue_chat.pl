@@ -97,7 +97,7 @@ __DATA__
 </div>
 
 %= javascript 'https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.20/vue.js'
-%= javascript 'https://cdn.rawgit.com/sockjs/websocket-multiplex/master/multiplex_client.js'
+%= javascript '/websocket_multiplex.js'
 <script>
   var vm = new Vue({
     el: '#chat',

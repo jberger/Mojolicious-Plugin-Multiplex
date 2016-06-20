@@ -68,12 +68,14 @@ var WebSocketMultiplex = (function(){
             switch(type) {
             case 'ack':
                 if (payload === 'true') {
+                    var was_open = sub.readyState === WebSocket.OPEN;
                     sub.readyState = WebSocket.OPEN;
-                    sub.emit('open');
+                    if (! was_open) { sub.emit('open') }
                 } else if (payload === 'false') {
+                    var was_closed = sub.readyState === WebSocket.CLOSED;
                     sub.readyState = WebSocket.CLOSED;
                     delete that.channels[name];
-                    sub.emit('close', {});
+                    if (! was_closed) { sub.emit('close', {}) }
                 }
                 //TODO implement ack request handler
                 break;

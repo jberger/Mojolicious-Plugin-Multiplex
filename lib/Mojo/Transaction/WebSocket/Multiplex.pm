@@ -32,6 +32,13 @@ sub new {
   return $self;
 }
 
+sub acknowledge {
+  my ($self, $chan, $payload, $cb) = @_;
+  return unless my $tx = $self->tx;
+  $payload = defined($payload) ? $payload ? ',true' : ',false' : '';
+  $tx->send("ack,$chan$payload", $cb ? sub { $self->$cb() } : ());
+}
+
 sub send {
   my ($self, $chan, $payload, $cb) = @_;
   return unless my $tx = $self->tx;

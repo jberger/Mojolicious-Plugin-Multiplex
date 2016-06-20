@@ -16,14 +16,18 @@ websocket '/channel' => sub {
   my $pubsub = $c->pg->pubsub;
   my $multiplex = $c->multiplex;
 
+  #NOTE these implementation respond when already subscribe,
+  # they could also send error if so desired
   my %channels;
   $multiplex->on(subscribe => sub {
-    my (undef, $channel) = @_;
-    return if exists $channels{$channel};
-    $channels{$channel} = $pubsub->listen($channel => sub {
-      my ($pubsub, $payload) = @_;
-      $c->multiplex->send($channel => $payload);
-    });
+    my ($multiplex, $channel) = @_;
+    unless(exists $channels{$channel}) {
+      $channels{$channel} = $pubsub->listen($channel => sub {
+        my ($pubsub, $payload) = @_;
+        $c->multiplex->send($channel => $payload);
+      });
+    }
+    $multiplex->acknowledge($channel, 1);
   });
 
   $multiplex->on(message => sub {
@@ -33,8 +37,10 @@ websocket '/channel' => sub {
 
   $multiplex->on(unsubscribe => sub {
     my (undef, $channel) = @_;
-    return unless my $cb = delete $channels{$channel};
-    $pubsub->unlisten($channel => $cb);
+    if(my $cb = delete $channels{$channel}) {
+      $pubsub->unlisten($channel => $cb);
+    }
+    $multiplex->acknowledge($channel, 0);
   });
 
   $multiplex->on(finish => sub {

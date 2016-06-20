@@ -66,12 +66,26 @@ var WebSocketMultiplex = (function(){
             var sub = that.channels[name];
 
             switch(type) {
+            case 'ack':
+                if (payload === 'true') {
+                    sub.readyState = WebSocket.OPEN;
+                    sub.emit('open');
+                } else if (payload === 'false') {
+                    sub.readyState = WebSocket.CLOSED;
+                    delete that.channels[name];
+                    sub.emit('close', {});
+                }
+                //TODO implement ack request handler
+                break;
             case 'uns':
                 delete that.channels[name];
                 sub.emit('close', {});
                 break;
             case 'msg':
                 sub.emit('message', {data: payload});
+                break;
+            case 'err':
+                sub.emit('error', payload);
                 break;
             }
         });
@@ -88,26 +102,22 @@ var WebSocketMultiplex = (function(){
         this.ws = ws;
         this.name = name;
         this.channels = channels;
-        var onopen = function() {
-            that.ws.send('sub,' + that.name);
-            that.emit('open');
-        };
-        if(ws.readyState > 0) {
+        this.readyState = WebSocket.CONNECTING;
+        var onopen = function() { that.ws.send('sub,' + that.name) };
+        if(ws.readyState > WebSocket.CONNECTING) {
             setTimeout(onopen, 0);
         } else {
             this.ws.addEventListener('open', onopen);
         }
     };
-    Channel.prototype = new DumbEventTarget()
+    Channel.prototype = new DumbEventTarget();
 
     Channel.prototype.send = function(data) {
         this.ws.send('msg,' + this.name + ',' + data);
     };
     Channel.prototype.close = function() {
-        var that = this;
+        this.readyState = WebSocket.CLOSING;
         this.ws.send('uns,' + this.name);
-        delete this.channels[this.name];
-        setTimeout(function(){that.emit('close', {});},0);
     };
 
     return WebSocketMultiplex;

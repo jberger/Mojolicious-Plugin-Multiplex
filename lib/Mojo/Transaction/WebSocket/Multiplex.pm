@@ -11,7 +11,7 @@ my %map = (
   sub => 'subscribe',
   msg => 'message',
   uns => 'unsubscribe',
-  err => 'client_error',
+  err => 'error',
   ack => 'acknowledge',
 );
 
@@ -23,23 +23,35 @@ sub new {
 
   $tx->on(text => sub {
     my ($tx, $bytes) = @_;
-    my ($type, $topic, $payload) = split /,/, $bytes, 3;
+    my %message;
+    @message{qw/type topic payload/} = split /,/, $bytes, 3;
 
-    my $e = $map{$type};
-    my @args = ($topic);
+    my $e = $map{$message{type}};
+    my @args = ($message{topic});
+
     if (! defined $e) {
-      $e = 'message_error';
-      unshift @args, "Message type not understood: $type";
-    } elsif ($e eq 'message' || $e eq 'client_error') {
-      push @args, $payload;
+      $e = 'error';
+      push @args, {
+        error => 'Message type not understood',
+        message => \%message,
+      };
+    } elsif ($e eq 'error') {
+      push @args, {
+        error   => 'Client error',
+        message => \%message,
+      };
+    } elsif ($e eq 'message') {
+      push @args, $message{payload};
     } elsif ($e eq 'acknowledge') {
       no warnings 'uninitialized';
-      push @args,
-        $payload eq 'true'  ? 1 :
-        $payload eq 'false' ? 0 :
-        ! (defined $payload || length $payload)  ? undef :
-        do { $e = 'message_error'; "Ack payload not understood: $payload" };
+      my $s = $message{payload};
+      push @args, $s eq 'true'  ? 1 :
+                  $s eq 'false' ? 0 :
+                  ! (defined $s || length $s)  ? undef :
+                  {error => 'Ack payload not understood', message => \%message};
+      $e = 'error' if ref $args[-1];
     }
+
     $self->emit($e, @args);
   });
 
@@ -59,7 +71,7 @@ sub send {
   $self->_send("msg,$topic,$payload", $cb);
 }
 
-sub send_error {
+sub error {
   my ($self, $topic, $payload, $cb) = @_;
   $self->_send("err,$topic,$payload", $cb);
 }
@@ -106,8 +118,8 @@ Mojo::Transaction::WebSocket::Multiplex - Dispatcher class for multiplexing webs
 
 This class sends and receives messages over a L<websocket transaction|Mojo::Transaction::WebSocket> using a variant of the sockjs websocket multiplex protocol.
 This variant defines five message types, they are: C<subscribe>, C<message>, C<unsubscribe>, C<acknowledge>, C<error>.
-Note that though the protocol defines an error message, the emitted event is called C<client_error> since L<Mojo::EventEmitter> has a specific meaning for an C<error> event.
 Further each message is assigned to a topic (channel) which is used to separate messages by subscribed listener.
+Note that though the protocol defines an error message, the event is also emitted on other errors; in the case of an error message the error string will be C<Client error>.
 
 =head1 PLEASE NOTE
 
@@ -147,23 +159,16 @@ Emitted with a topic name and either true or false (but defined) value when indi
 
 The server may reply to these requests but none is required.
 For agreement with an indicated state or sending the requested current state, use L</acknowledge>.
-For disagreeing with the indicated state, an error should be sent with L</send_error>.
+For disagreeing with the indicated state, an error should be sent with L</error>.
 
-=head2 client_error
+=head2 error
 
-  $multiplex->on(client_error => sub { my ($multiplex, $topic, $payload) = @_; ... });
+  $multiplex->on(error => sub { my ($multiplex, $topic, $error) = @_; ... });
 
-Emitted when a client sends an error message.
-Passed the topic and payload from the message.
-The response and handling is up to the particular server implementation and is not specified in the protocol.
-
-=head2 message_error
-
-  $multiplex->on(message_error => sub { my ($multiplex, $topic, $payload) = @_; ... });
-
-Emitted when a client sends a message which is not understood.
-Passed the topic and generated error message.
-The response and handling is up to the particular server implementation and is not specified in the protocol.
+Emitted when a client sends a message which is not understood or other errors.
+Fatal if not handled
+Passed the topic and an error data structure.
+This structure contains an C<error> key which defines the error and a C<message> key which contains the raw parsed error.
 
 =head2 finish
 
@@ -202,9 +207,9 @@ Send a message to the client on the given topic.
 Takes a topic, a payload, and an optional drain callback.
 As mentioned above, neither the topic name or payload are encoded before sending, so be sure to do so manually if necessary.
 
-=head2 send_error
+=head2 error
 
-  $multiplex->send_error($topic, $payload, $cb);
+  $multiplex->error($topic, $payload, $cb);
 
 Send an error message to the client on the given topic.
 Takes a topic, a payload, and an optional drain callback.

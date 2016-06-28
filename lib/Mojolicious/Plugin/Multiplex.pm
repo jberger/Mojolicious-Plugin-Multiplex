@@ -2,7 +2,7 @@ package Mojolicious::Plugin::Multiplex;
 
 use Mojo::Base 'Mojolicious::Plugin';
 
-use Mojo::Transaction::WebSocket::Multiplex;
+use Mojolicious::Plugin::Multiplex::Multiplexer;
 
 sub register {
   my ($plugin, $app, $conf) = @_;
@@ -14,7 +14,7 @@ sub register {
     my $tx = $c->tx;
     return undef unless $tx->is_websocket;
     $c->rendered(101) unless $tx->established;
-    return $c->stash->{'multiplex.instance'} ||= Mojo::Transaction::WebSocket::Multiplex->new(tx => $tx);
+    return $c->stash->{'multiplex.multiplexer'} ||= Mojolicious::Plugin::Multiplex::Multiplexer->new(tx => $tx);
   });
 }
 

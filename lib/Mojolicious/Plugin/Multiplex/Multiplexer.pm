@@ -1,4 +1,4 @@
-package Mojo::Transaction::WebSocket::Multiplex;
+package Mojolicious::Plugin::Multiplex::Multiplexer;
 
 use Mojo::Base 'Mojo::EventEmitter';
 
@@ -86,14 +86,14 @@ sub _send {
 
 =head1 NAME
 
-Mojo::Transaction::WebSocket::Multiplex - Dispatcher class for multiplexing websockets
+Mojolicious::Plugin::Multiplex::Multiplexer - Dispatcher class for multiplexing websockets
 
 =head1 SYNOPSIS
 
   # a simple single-threaded message relay example
 
-  use Mojo::Transaction::WebSocket::Multiplex;
-  my $multiplex = Mojo::Transaction::WebSocket::Multiplex->new(tx => $tx);
+  use Mojolicious::Plugin::Multiplex::Multiplexer;
+  my $multiplex = Mojolicious::Plugin::Multiplex::Multiplexer->new(tx => $tx);
 
   my %topics;
   $multiplex->on(message => sub {

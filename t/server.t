@@ -11,7 +11,7 @@ websocket '/socket' => sub {
   my $c = shift;;
   my $m = $c->multiplex;
 
-  for my $e (qw/subscribe message unsubscribe acknowledge error/) {
+  for my $e (qw/subscribe message unsubscribe status error/) {
     $m->on($e => sub {
       $event = $e;
       (undef, $topic, $data) = @_;
@@ -49,25 +49,25 @@ $t->$send_event_ok('uns,mytopic');
 is $event, 'unsubscribe', 'right event';
 is $topic, 'mytopic',     'right topic';
 
-$t->$send_event_ok('ack,mytopic,true');
-is $event, 'acknowledge', 'right event';
+$t->$send_event_ok('sta,mytopic,true');
+is $event, 'status', 'right event';
 is $topic, 'mytopic',     'right topic';
 ok $data, 'right payload';
 
-$t->$send_event_ok('ack,mytopic,false');
-is $event, 'acknowledge', 'right event';
+$t->$send_event_ok('sta,mytopic,false');
+is $event, 'status', 'right event';
 is $topic, 'mytopic',     'right topic';
 ok defined $data && !$data, 'right payload';
 
-$t->$send_event_ok('ack,mytopic');
-is $event, 'acknowledge', 'right event';
+$t->$send_event_ok('sta,mytopic');
+is $event, 'status', 'right event';
 is $topic, 'mytopic',     'right topic';
 ok !defined $data, 'right payload';
 
-$t->$send_event_ok('ack,mytopic,wat');
+$t->$send_event_ok('sta,mytopic,wat');
 is $event, 'error',   'right event';
 is $topic, 'mytopic', 'right topic';
-is $data->{error}, 'Ack payload not understood', 'correct error message';
+is $data->{error}, 'Status payload not understood', 'correct error message';
 
 $t->$send_event_ok('err,mytopic,argh');
 is $event, 'error',   'right event';

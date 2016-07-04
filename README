@@ -9,8 +9,9 @@ sub - expresses a will to subscribe to a given topic.
 msg - a message with payload is being sent on a topic.
 uns - a will to unsubscribe from a topic.
 err - a message with a payload that is emitted as an error
-ack - a message stating whether the other party believes you are subscribed to the topic
+sta - a status message stating whether the other party believes you are subscribed to the topic
       the playload is either "true" or "false"
       this message is sent as a response to sub/uns messages
+      (TODO: consider empty status message to request the status from the other party?)
 
 Invalid messages like wrong unsubscriptions or publishes to a topic to which a client was not subscribed to are simply ignored.

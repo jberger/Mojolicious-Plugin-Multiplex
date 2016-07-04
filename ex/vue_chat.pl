@@ -27,7 +27,7 @@ websocket '/channel' => sub {
         $c->multiplex->send($channel => $payload);
       });
     }
-    $multiplex->acknowledge($channel, 1);
+    $multiplex->send_status($channel, 1);
   });
 
   $multiplex->on(message => sub {
@@ -40,7 +40,7 @@ websocket '/channel' => sub {
     if(my $cb = delete $channels{$channel}) {
       $pubsub->unlisten($channel => $cb);
     }
-    $multiplex->acknowledge($channel, 0);
+    $multiplex->send_status($channel, 0);
   });
 
   $multiplex->on(finish => sub {

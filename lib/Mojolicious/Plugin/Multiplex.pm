@@ -66,7 +66,7 @@ var WebSocketMultiplex = (function(){
             var sub = that.channels[name];
 
             switch(type) {
-            case 'ack':
+            case 'sta':
                 if (payload === 'true') {
                     var was_open = sub.readyState === WebSocket.OPEN;
                     sub.readyState = WebSocket.OPEN;
@@ -77,7 +77,7 @@ var WebSocketMultiplex = (function(){
                     delete that.channels[name];
                     if (! was_closed) { sub.emit('close', {}) }
                 }
-                //TODO implement ack request handler
+                //TODO implement status request handler
                 break;
             case 'uns':
                 delete that.channels[name];

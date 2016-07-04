@@ -12,7 +12,7 @@ my %map = (
   msg => 'message',
   uns => 'unsubscribe',
   err => 'error',
-  ack => 'acknowledge',
+  sta => 'status',
 );
 
 sub new {
@@ -42,13 +42,13 @@ sub new {
       };
     } elsif ($e eq 'message') {
       push @args, $message{payload};
-    } elsif ($e eq 'acknowledge') {
+    } elsif ($e eq 'status') {
       no warnings 'uninitialized';
       my $s = $message{payload};
       push @args, $s eq 'true'  ? 1 :
                   $s eq 'false' ? 0 :
                   ! (defined $s || length $s)  ? undef :
-                  {error => 'Ack payload not understood', message => \%message};
+                  {error => 'Status payload not understood', message => \%message};
       $e = 'error' if ref $args[-1];
     }
 
@@ -60,10 +60,10 @@ sub new {
   return $self;
 }
 
-sub acknowledge {
+sub send_status {
   my ($self, $topic, $payload, $cb) = @_;
   $payload = defined($payload) ? $payload ? ',true' : ',false' : '';
-  $self->_send("ack,$topic$payload", $cb);
+  $self->_send("sta,$topic$payload", $cb);
 }
 
 sub send {
@@ -105,19 +105,19 @@ Mojolicious::Plugin::Multiplex::Multiplexer - Dispatcher class for multiplexing 
   $multiplex->on(subscribe => sub {
     my ($multiplex, $topic) = @_;
     $topics{$topic} = sub { shift->send(@_) };
-    $multiplex->acknowledge($topic, 1);
+    $multiplex->send_status($topic, 1);
   });
 
   $multiplex->on(unsubscribe => sub {
     my ($multiplex, $topic) = @_;
     delete $topics{$topic};
-    $multiplex->acknowledge($topic, 0);
+    $multiplex->send_status($topic, 0);
   });
 
 =head1 DESCRIPTION
 
 This class sends and receives messages over a L<websocket transaction|Mojo::Transaction::WebSocket> using a variant of the sockjs websocket multiplex protocol.
-This variant defines five message types, they are: C<subscribe>, C<message>, C<unsubscribe>, C<acknowledge>, C<error>.
+This variant defines five message types, they are: C<subscribe>, C<message>, C<unsubscribe>, C<status>, C<error>.
 Further each message is assigned to a topic (channel) which is used to separate messages by subscribed listener.
 Note that though the protocol defines an error message, the event is also emitted on other errors; in the case of an error message the error string will be C<Client error>.
 
@@ -141,7 +141,7 @@ Inherits all of the events from L<Mojo::EventEmitted> and implements the followi
 
 Emitted with a topic when the client expresses an interest in subscribing to or leaving the given topic.
 
-A server should respond to this message event with a L</acknowledge> reply indicating the new subscription state.
+A server should respond to this message event with a L</status> reply indicating the new subscription state.
 
 =head2 message
 
@@ -150,15 +150,15 @@ A server should respond to this message event with a L</acknowledge> reply indic
 Emitted when a message is received from the client.
 It is passed the topic and the payload in original encoded form (bytes).
 
-=head2 acknowledge
+=head2 status
 
-  $multiplex->on(acknowledge => sub { my ($multiplex, $topic, $payload) = @_; ... });
+  $multiplex->on(status => sub { my ($multiplex, $topic, $payload) = @_; ... });
 
-Emitted when a client attempts to indicate its own subscription status of a topic (rare) or else requests the subscription status for a given topic.
+Emitted when a client attempts to indicate its own subscription status of a topic (rare) or else requests the subscription status for a given topic (proposed usage).
 Emitted with a topic name and either true or false (but defined) value when indicating the state or undefined when requesting a state.
 
 The server may reply to these requests but none is required.
-For agreement with an indicated state or sending the requested current state, use L</acknowledge>.
+For agreement with an indicated state or sending the requested current state, use L</status>.
 For disagreeing with the indicated state, an error should be sent with L</error>.
 
 =head2 error
@@ -190,9 +190,9 @@ This should be an instance of L<Mojo::Transaction::WebSocket>.
 
 Inherits all of the methods from L<Mojo::EventEmitter> and implements the following new ones.
 
-=head2 acknowledge
+=head2 send_status
 
-  $multiplex->acknowledge($topic, $state, $cb);
+  $multiplex->send_status($topic, $state, $cb);
 
 Send the current state of a topic subscription (as in the response from L</subscribe> and L<unsubscrive> or request the client's subscription state (rare).
 Takes a topic, a state, and an optional drain callback.

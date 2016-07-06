@@ -214,3 +214,19 @@ As mentioned above, neither the topic name or payload are encoded before sending
 Send an error message to the client on the given topic.
 Takes a topic, a payload, and an optional drain callback.
 
+=head1 PROTOCOL
+
+The original protocol (extended below) was proposed by SockJS, can be found at L<https://github.com/sockjs/websocket-multiplex>.
+
+The underlying protocol is quite simple. Each message is a string consisting of three comma separated parts: type, topic and payload. There are three valid message types:
+
+sub - expresses a will to subscribe to a given topic.
+msg - a message with payload is being sent on a topic.
+uns - a will to unsubscribe from a topic.
+err - a message with a payload that is emitted as an error
+sta - a status message stating whether the other party believes you are subscribed to the topic
+      the playload is either "true" or "false"
+      this message is sent as a response to sub/uns messages
+      (TODO: consider empty status message to request the status from the other party?)
+
+

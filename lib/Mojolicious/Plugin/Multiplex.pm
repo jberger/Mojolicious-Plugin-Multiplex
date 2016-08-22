@@ -155,16 +155,38 @@ var WebSocketMultiplex = (function(){
     // ****
 
     var WebSocketMultiplex = function(ws) {
-        var that = this;
         this.ws = ws;
         this.channels = {};
-        this.ws.addEventListener('message', function(e) {
+        this.open();
+    };
+
+    WebSocketMultiplex.prototype.open = function() {
+        var multiplex = this;
+
+        if (multiplex.ws.readyState > WebSocket.OPEN) {
+          multiplex.ws = new WebSocket(multiplex.ws.url);
+
+          multiplex.ws.addEventListener('open', function(e) {
+              multiplex.eachChannel(function(channel) {
+                  setTimeout(function(){ channel.subscribe() }, 0);
+              });
+          });
+        }
+
+        multiplex.ws.addEventListener('close', function(e) {
+            multiplex.eachChannel(function(channel) {
+                channel.readyState = WebSocket.CONNECTING;
+            });
+            setTimeout(function(){ multiplex.open() }, 500);
+        });
+
+        multiplex.ws.addEventListener('message', function(e) {
             var t = e.data.split(',');
             var type = t.shift(), name = t.shift(),  payload = t.join();
-            if(!(name in that.channels)) {
+            if(!(name in multiplex.channels)) {
                 return;
             }
-            var sub = that.channels[name];
+            var sub = multiplex.channels[name];
 
             switch(type) {
             case 'sta':
@@ -175,13 +197,13 @@ var WebSocketMultiplex = (function(){
                 } else if (payload === 'false') {
                     var was_closed = sub.readyState === WebSocket.CLOSED;
                     sub.readyState = WebSocket.CLOSED;
-                    delete that.channels[name];
+                    delete multiplex.channels[name];
                     if (! was_closed) { sub.emit('close', {}) }
                 }
                 //TODO implement status request handler
                 break;
             case 'uns':
-                delete that.channels[name];
+                delete multiplex.channels[name];
                 sub.emit('close', {});
                 break;
             case 'msg':
@@ -193,34 +215,45 @@ var WebSocketMultiplex = (function(){
             }
         });
     };
+
+    WebSocketMultiplex.prototype.eachChannel = function(cb) {
+        for (var channel in this.channels) {
+            if (this.channels.hasOwnProperty(channel)) {
+                console.log('setting callback for ' + channel);
+                cb(this.channels[channel]);
+            }
+        }
+    };
+
     WebSocketMultiplex.prototype.channel = function(raw_name) {
-        return this.channels[escape(raw_name)] =
-            new Channel(this.ws, escape(raw_name), this.channels);
+        return this.channels[escape(raw_name)] = new Channel(this, escape(raw_name));
     };
 
 
-    var Channel = function(ws, name, channels) {
+    var Channel = function(multiplex, name) {
         DumbEventTarget.call(this);
         var that = this;
-        this.ws = ws;
+        this.multiplex = multiplex;
+        var ws = multiplex.ws;
         this.name = name;
-        this.channels = channels;
         this.readyState = WebSocket.CONNECTING;
-        var onopen = function() { that.ws.send('sub,' + that.name) };
         if(ws.readyState > WebSocket.CONNECTING) {
-            setTimeout(onopen, 0);
+            setTimeout(function(){ that.subscribe() }, 0);
         } else {
-            this.ws.addEventListener('open', onopen);
+            ws.addEventListener('open', function(){ that.subscribe() });
         }
     };
     Channel.prototype = new DumbEventTarget();
 
+    Channel.prototype.subscribe = function () {
+        this.multiplex.ws.send('sub,' + this.name);
+    };
     Channel.prototype.send = function(data) {
-        this.ws.send('msg,' + this.name + ',' + data);
+        this.multiplex.ws.send('msg,' + this.name + ',' + data);
     };
     Channel.prototype.close = function() {
         this.readyState = WebSocket.CLOSING;
-        this.ws.send('uns,' + this.name);
+        this.multiplex.ws.send('uns,' + this.name);
     };
 
     return WebSocketMultiplex;

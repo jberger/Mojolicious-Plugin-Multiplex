@@ -2,6 +2,9 @@ package Mojolicious::Plugin::Multiplex;
 
 use Mojo::Base 'Mojolicious::Plugin';
 
+our $VERSION = '0.01';
+$VERSION = eval $VERSION;
+
 use Mojolicious::Plugin::Multiplex::Multiplexer;
 
 sub register {

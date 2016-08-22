@@ -14,8 +14,8 @@ Mojolicious::Plugin::Multiplex - A websocket multiplexing layer for Mojolicious 
     my $c = shift;
     my $multiplex = $c->multiplex;
     $multiplex->on(subscribe   => sub { ... });
-    $multoplex->on(message     => sub { ... });
-    $multoplex->on(unsubscribe => sub { ... });
+    $multiplex->on(message     => sub { ... });
+    $multiplex->on(unsubscribe => sub { ... });
   };
 
   __DATA__

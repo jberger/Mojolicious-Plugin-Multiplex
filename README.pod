@@ -32,6 +32,11 @@ Mojolicious::Plugin::Multiplex - A websocket multiplexing layer for Mojolicious 
     bar.onmessage = function (e) { console.log('bar channel got: ' + e.data) };
   </script>
 
+=head1 CAUTION
+
+This module is in its infancy and things can and will change in incompatible ways until this warning is removed.
+That said, the author is using it for real work so hopefully incompatible changes will be minimal (for his own sanity).
+
 =head1 DESCRIPTION
 
 L<Mojolicious::Plugin::Multiplex> implements a mechanism proposed by L<SockJS|https://github.com/sockjs/websocket-multiplex> for the multiplexing of data on a single websocket.
@@ -80,6 +85,11 @@ It provides the new class C<WebSocketMultiplex> whose constructor takes as its o
 This then is used to open new channel objects via the C<channel> method which takes a topic string as an arugment.
 Topics can be almost any string, however they must not contain a comma (a limitation of the protocol).
 The resulting channel objects implement the same API as a WebSocket (though they do not inherit from it).
+
+The client-side multiplexer will also attempt to reconnect to closed sockets and when successful will automatically resubscribe to the channels that were subscribed.
+
+N.B. This library is the least stable of the entire project.
+Use with caution.
 
 =head1 SOURCE REPOSITORY
 

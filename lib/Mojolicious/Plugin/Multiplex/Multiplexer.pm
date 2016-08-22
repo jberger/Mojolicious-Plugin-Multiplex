@@ -68,11 +68,13 @@ sub send_status {
 
 sub send {
   my ($self, $topic, $payload, $cb) = @_;
+  $payload //= '';
   $self->_send("msg,$topic,$payload", $cb);
 }
 
 sub error {
   my ($self, $topic, $payload, $cb) = @_;
+  $payload //= '';
   $self->_send("err,$topic,$payload", $cb);
 }
 

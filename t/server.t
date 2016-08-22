@@ -7,8 +7,21 @@ plugin 'Multiplex';
 
 my ($event, $topic, $data);
 
+websocket '/protocol' => sub {
+  my $c = shift;
+  my $drain = $c->param('drain');
+  my $m = $c->multiplex;
+  $c->tx->unsubscribe('text'); # disable default listener
+
+  $c->on(json => sub {
+    my (undef, $json) = @_;
+    my $method = shift @$json;
+    $m->$method(@$json, $drain ? sub { $m->send(othertopic => 'ok') } : ());
+  });
+};
+
 websocket '/socket' => sub {
-  my $c = shift;;
+  my $c = shift;
   my $m = $c->multiplex;
 
   for my $e (qw/subscribe message unsubscribe status error/) {
@@ -18,6 +31,54 @@ websocket '/socket' => sub {
     });
   }
 };
+
+my $t = Test::Mojo->new;
+$t->websocket_ok('/protocol')
+  # send_status
+  ->send_ok({json => ['send_status', 'mytopic', 1]})
+  ->message_ok
+  ->message_is('sta,mytopic,true')
+  ->send_ok({json => ['send_status', 'mytopic', 0]})
+  ->message_ok
+  ->message_is('sta,mytopic,false')
+  ->send_ok({json => ['send_status', 'mytopic']})
+  ->message_ok
+  ->message_is('sta,mytopic')
+  # send
+  ->send_ok({json => ['send', 'mytopic', 'data']})
+  ->message_ok
+  ->message_is('msg,mytopic,data')
+  ->send_ok({json => ['send', 'mytopic', '']})
+  ->message_ok
+  ->message_is('msg,mytopic,')
+  ->send_ok({json => ['send', 'mytopic', undef]})
+  ->message_ok
+  ->message_is('msg,mytopic,')
+  ->send_ok({json => ['send', 'mytopic']})
+  ->message_ok
+  ->message_is('msg,mytopic,')
+  # error
+  ->send_ok({json => ['error', 'mytopic', 'data']})
+  ->message_ok
+  ->message_is('err,mytopic,data')
+  ->send_ok({json => ['error', 'mytopic', '']})
+  ->message_ok
+  ->message_is('err,mytopic,')
+  ->send_ok({json => ['error', 'mytopic', undef]})
+  ->message_ok
+  ->message_is('err,mytopic,')
+  ->send_ok({json => ['error', 'mytopic']})
+  ->message_ok
+  ->message_is('err,mytopic,')
+  ->finish_ok;
+
+$t->websocket_ok('/protocol?drain=1')
+  ->send_ok({json => ['send', 'thistopic', 'hi']})
+  ->message_ok
+  ->message_is('msg,thistopic,hi')
+  ->message_ok
+  ->message_is('msg,othertopic,ok')
+  ->finish_ok;
 
 my $send_event_ok = sub {
   my ($t, $message, $desc) = @_;
@@ -34,7 +95,6 @@ my $send_event_ok = sub {
   $t->success(ok $sent && $event ne 'TIMEOUT');
 };
 
-my $t = Test::Mojo->new;
 $t->websocket_ok('/socket')
   ->$send_event_ok('sub,mytopic');
 is $event, 'subscribe', 'right event';

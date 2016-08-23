@@ -239,7 +239,11 @@ var WebSocketMultiplex = (function(){
     };
 
     WebSocketMultiplex.prototype.channel = function(raw_name) {
-        return this.channels[escape(raw_name)] = new Channel(this, escape(raw_name));
+        var name = escape(raw_name);
+        if (! this.channels[name] ) {
+            this.channels[name] = new Channel(this, name);
+        }
+        return this.channels[name];
     };
 
 

@@ -57,17 +57,17 @@ $t->websocket_ok('/protocol')
   ->send_ok({json => ['send', 'mytopic']})
   ->message_ok
   ->message_is('msg,mytopic,')
-  # error
-  ->send_ok({json => ['error', 'mytopic', 'data']})
+  # send_error
+  ->send_ok({json => ['send_error', 'mytopic', 'data']})
   ->message_ok
   ->message_is('err,mytopic,data')
-  ->send_ok({json => ['error', 'mytopic', '']})
+  ->send_ok({json => ['send_error', 'mytopic', '']})
   ->message_ok
   ->message_is('err,mytopic,')
-  ->send_ok({json => ['error', 'mytopic', undef]})
+  ->send_ok({json => ['send_error', 'mytopic', undef]})
   ->message_ok
   ->message_is('err,mytopic,')
-  ->send_ok({json => ['error', 'mytopic']})
+  ->send_ok({json => ['send_error', 'mytopic']})
   ->message_ok
   ->message_is('err,mytopic,')
   ->finish_ok;

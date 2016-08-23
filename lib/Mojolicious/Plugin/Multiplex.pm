@@ -2,7 +2,7 @@ package Mojolicious::Plugin::Multiplex;
 
 use Mojo::Base 'Mojolicious::Plugin';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 $VERSION = eval $VERSION;
 
 use Mojolicious::Plugin::Multiplex::Multiplexer;

@@ -72,7 +72,7 @@ sub send {
   $self->_send("msg,$topic,$payload", $cb);
 }
 
-sub error {
+sub send_error {
   my ($self, $topic, $payload, $cb) = @_;
   $payload //= '';
   $self->_send("err,$topic,$payload", $cb);
@@ -161,7 +161,7 @@ Emitted with a topic name and either true or false (but defined) value when indi
 
 The server may reply to these requests but none is required.
 For agreement with an indicated state or sending the requested current state, use L</status>.
-For disagreeing with the indicated state, an error should be sent with L</error>.
+For disagreeing with the indicated state, an error should be sent with L</send_error>.
 
 =head2 error
 
@@ -209,9 +209,9 @@ Send a message to the client on the given topic.
 Takes a topic, a payload, and an optional drain callback.
 As mentioned above, neither the topic name or payload are encoded before sending, so be sure to do so manually if necessary.
 
-=head2 error
+=head2 send_error
 
-  $multiplex->error($topic, $payload, $cb);
+  $multiplex->send_error($topic, $payload, $cb);
 
 Send an error message to the client on the given topic.
 Takes a topic, a payload, and an optional drain callback.

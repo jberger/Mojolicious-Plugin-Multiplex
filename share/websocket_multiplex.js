@@ -1,4 +1,4 @@
-// original at https://github.com/sockjs/websocket-multiplex/blob/master/multiplex_client.js
+// inspired by and forked from https://github.com/sockjs/websocket-multiplex/blob/master/multiplex_client.js
 
 var WebSocketMultiplex = (function(){
 
@@ -28,16 +28,26 @@ var WebSocketMultiplex = (function(){
     // ****
 
     var WebSocketMultiplex = function(ws) {
-        this.ws = ws;
+        if (ws instanceof WebSocket) {
+            this.ws = ws;
+        } else {
+            this.ws = null;
+            this._url = ws;
+        }
         this.channels = {};
         this.open();
     };
 
+    Object.defineProperty(WebSocketMultiplex.prototype, 'url', {
+        get: function() { return this._url || this.ws.url },
+        set: function(url) { this._url = url },
+    });
+
     WebSocketMultiplex.prototype.open = function() {
         var multiplex = this;
 
-        if (multiplex.ws.readyState > WebSocket.OPEN) {
-          multiplex.ws = new WebSocket(multiplex.ws.url);
+        if (!multiplex.ws || multiplex.ws.readyState > WebSocket.OPEN) {
+          multiplex.ws = new WebSocket(multiplex.url);
 
           multiplex.ws.addEventListener('open', function(e) {
               multiplex.eachChannel(function(channel) {
@@ -92,7 +102,6 @@ var WebSocketMultiplex = (function(){
     WebSocketMultiplex.prototype.eachChannel = function(cb) {
         for (var channel in this.channels) {
             if (this.channels.hasOwnProperty(channel)) {
-                console.log('setting callback for ' + channel);
                 cb(this.channels[channel]);
             }
         }

@@ -1,0 +1,7 @@
+Build.PL
+LICENSE
+MANIFEST
+MANIFEST.SKIP.bak
+META.*
+README
+Mojolicious-Plugin-Multiplex-*.tar.gz

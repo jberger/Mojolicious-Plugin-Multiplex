@@ -44,32 +44,32 @@ var WebSocketMultiplex = (function(){
     });
 
     WebSocketMultiplex.prototype.open = function() {
-        var multiplex = this;
+        var self = this;
 
-        if (!multiplex.ws || multiplex.ws.readyState > WebSocket.OPEN) {
-          multiplex.ws = new WebSocket(multiplex.url);
+        if (!self.ws || self.ws.readyState > WebSocket.OPEN) {
+          self.ws = new WebSocket(self.url);
 
-          multiplex.ws.addEventListener('open', function(e) {
-              multiplex.eachChannel(function(channel) {
+          self.ws.addEventListener('open', function(e) {
+              self.eachChannel(function(channel) {
                   setTimeout(function(){ channel.subscribe() }, 0);
               });
           });
         }
 
-        multiplex.ws.addEventListener('close', function(e) {
-            multiplex.eachChannel(function(channel) {
+        self.ws.addEventListener('close', function(e) {
+            self.eachChannel(function(channel) {
                 channel.readyState = WebSocket.CONNECTING;
             });
-            setTimeout(function(){ multiplex.open() }, 500);
+            setTimeout(function(){ self.open() }, 500);
         });
 
-        multiplex.ws.addEventListener('message', function(e) {
+        self.ws.addEventListener('message', function(e) {
             var t = e.data.split(',');
             var type = t.shift(), name = t.shift(),  payload = t.join();
-            if(!(name in multiplex.channels)) {
+            if(!(name in self.channels)) {
                 return;
             }
-            var sub = multiplex.channels[name];
+            var sub = self.channels[name];
 
             switch(type) {
             case 'sta':
@@ -80,13 +80,13 @@ var WebSocketMultiplex = (function(){
                 } else if (payload === 'false') {
                     var was_closed = sub.readyState === WebSocket.CLOSED;
                     sub.readyState = WebSocket.CLOSED;
-                    delete multiplex.channels[name];
+                    delete self.channels[name];
                     if (! was_closed) { sub.emit('close', {}) }
                 }
                 //TODO implement status request handler
                 break;
             case 'uns':
-                delete multiplex.channels[name];
+                delete self.channels[name];
                 sub.emit('close', {});
                 break;
             case 'msg':
@@ -117,16 +117,16 @@ var WebSocketMultiplex = (function(){
 
 
     var Channel = function(multiplex, name) {
-        DumbEventTarget.call(this);
-        var that = this;
+        var self = this;
+        DumbEventTarget.call(self);
         this.multiplex = multiplex;
         var ws = multiplex.ws;
         this.name = name;
         this.readyState = WebSocket.CONNECTING;
         if(ws.readyState > WebSocket.CONNECTING) {
-            setTimeout(function(){ that.subscribe() }, 0);
+            setTimeout(function(){ self.subscribe() }, 0);
         } else {
-            ws.addEventListener('open', function(){ that.subscribe() });
+            ws.addEventListener('open', function(){ self.subscribe() });
         }
     };
     Channel.prototype = new DumbEventTarget();

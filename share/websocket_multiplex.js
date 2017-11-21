@@ -2,28 +2,51 @@
 
 var WebSocketMultiplex = (function(){
 
+  // EventTarget implementation taken (mostly) from
+  // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget
+  var EventTarget = function() {
+    this.listeners = {};
+  };
 
-    // ****
+  EventTarget.prototype.listeners = null;
+  EventTarget.prototype.addEventListener = function(type, callback) {
+    if (!(type in this.listeners)) {
+      this.listeners[type] = [];
+    }
+    this.listeners[type].push(callback);
+  };
 
-    var DumbEventTarget = function() {
-        this._listeners = {};
-    };
-    DumbEventTarget.prototype._ensure = function(type) {
-        if(!(type in this._listeners)) this._listeners[type] = [];
-    };
-    DumbEventTarget.prototype.addEventListener = function(type, listener) {
-        this._ensure(type);
-        this._listeners[type].push(listener);
-    };
-    DumbEventTarget.prototype.emit = function(type) {
-        this._ensure(type);
-        var args = Array.prototype.slice.call(arguments, 1);
-        if(this['on' + type]) this['on' + type].apply(this, args);
-        for(var i=0; i < this._listeners[type].length; i++) {
-            this._listeners[type][i].apply(this, args);
-        }
-    };
+  EventTarget.prototype.removeEventListener = function(type, callback) {
+    if (!(type in this.listeners)) {
+      return;
+    }
+    var stack = this.listeners[type];
+    for (var i = 0, l = stack.length; i < l; i++) {
+      if (stack[i] === callback){
+        stack.splice(i, 1);
+        return;
+      }
+    }
+  };
 
+  EventTarget.prototype.dispatchEvent = function(event) {
+    var type = event.type;
+
+    // handle subscription via on attributes
+    if(this['on' + type]) {
+      this['on' + type].call(this, event);
+    }
+
+    // handle listeners added via addEventListener
+    if (type in this.listeners) {
+      var stack = this.listeners[type];
+      for (var i = 0, l = stack.length; i < l; i++) {
+        stack[i].call(this, event);
+      }
+    }
+
+    return !event.defaultPrevented;
+  };
 
     // ****
 
@@ -76,24 +99,29 @@ var WebSocketMultiplex = (function(){
                 if (payload === 'true') {
                     var was_open = sub.readyState === WebSocket.OPEN;
                     sub.readyState = WebSocket.OPEN;
-                    if (! was_open) { sub.emit('open') }
+                    if (! was_open) {
+                      sub.dispatchEvent(new Event('open'));
+                    }
                 } else if (payload === 'false') {
                     var was_closed = sub.readyState === WebSocket.CLOSED;
                     sub.readyState = WebSocket.CLOSED;
                     delete self.channels[name];
-                    if (! was_closed) { sub.emit('close', {}) }
+                    if (! was_closed) {
+                      sub.dispatchEvent(new CloseEvent('close'));
+                    }
                 }
                 //TODO implement status request handler
                 break;
             case 'uns':
                 delete self.channels[name];
-                sub.emit('close', {});
+                sub.dispatchEvent(new CloseEvent('close'));
                 break;
             case 'msg':
-                sub.emit('message', {data: payload});
+                sub.dispatchEvent(new MessageEvent('message', {data: payload}));
                 break;
             case 'err':
-                sub.emit('error', payload);
+                // this deviates from the WebSocket spec to include error detail
+                sub.dispatchEvent(new CustomEvent('error', {detail: payload}));
                 break;
             }
         });
@@ -118,7 +146,7 @@ var WebSocketMultiplex = (function(){
 
     var Channel = function(multiplex, name) {
         var self = this;
-        DumbEventTarget.call(self);
+        EventTarget.call(self);
         this.multiplex = multiplex;
         var ws = multiplex.ws;
         this.name = name;
@@ -129,7 +157,7 @@ var WebSocketMultiplex = (function(){
             ws.addEventListener('open', function(){ self.subscribe() });
         }
     };
-    Channel.prototype = new DumbEventTarget();
+    Channel.prototype = new EventTarget();
 
     Channel.prototype.subscribe = function () {
         this.multiplex.ws.send('sub,' + this.name);

@@ -48,6 +48,18 @@ var WebSocketMultiplex = (function(){
     return !event.defaultPrevented;
   };
 
+  EventTarget.prototype.hasEventListeners = function(type) {
+    if(('on' + type) in this) {
+      return true;
+    }
+
+    if ((type in this.listeners) && (this.listeners[type].length)) {
+      return true;
+    }
+
+    return false;
+  };
+
     // ****
 
     var WebSocketMultiplex = function(ws) {
@@ -150,6 +162,15 @@ var WebSocketMultiplex = (function(){
         this.multiplex = multiplex;
         var ws = multiplex.ws;
         this.name = name;
+
+        // add jsonmessage event, to save reparsing of json data, common to websockets
+        this.addEventListener('message', function(event) {
+          // JSON.parse is expensive if there are no subscribers
+          if (!this.hasEventListeners('jsonmessage')) return;
+          var e = new MessageEvent('jsonmessage', { data: JSON.parse(event.data) });
+          this.dispatchEvent(e);
+        });
+
         this.readyState = WebSocket.CONNECTING;
         if(ws.readyState > WebSocket.CONNECTING) {
             setTimeout(function(){ self.subscribe() }, 0);

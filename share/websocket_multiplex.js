@@ -138,13 +138,13 @@ var WebSocketMultiplex = (function(){
     WebSocketMultiplex.prototype.channel = function(raw_name) {
         var name = escape(raw_name);
         if (! this.channels[name] ) {
-            this.channels[name] = new Channel(this, name);
+            this.channels[name] = new WebSocketMultiplexChannel(this, name);
         }
         return this.channels[name];
     };
 
 
-    var Channel = function(multiplex, name) {
+    var WebSocketMultiplexChannel = function(multiplex, name) {
         var self = this;
         EventTarget.call(self);
         this.multiplex = multiplex;
@@ -157,15 +157,15 @@ var WebSocketMultiplex = (function(){
             ws.addEventListener('open', function(){ self.subscribe() });
         }
     };
-    Channel.prototype = new EventTarget();
+    WebSocketMultiplexChannel.prototype = new EventTarget();
 
-    Channel.prototype.subscribe = function () {
+    WebSocketMultiplexChannel.prototype.subscribe = function () {
         this.multiplex.ws.send('sub,' + this.name);
     };
-    Channel.prototype.send = function(data) {
+    WebSocketMultiplexChannel.prototype.send = function(data) {
         this.multiplex.ws.send('msg,' + this.name + ',' + data);
     };
-    Channel.prototype.close = function() {
+    WebSocketMultiplexChannel.prototype.close = function() {
         this.readyState = WebSocket.CLOSING;
         this.multiplex.ws.send('uns,' + this.name);
     };

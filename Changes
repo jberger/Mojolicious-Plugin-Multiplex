@@ -1,7 +1,8 @@
 Revision history for Perl module Mojolicious-Plugin-Multiplex
 
 0.04 2017-11-21
-  - Replace DumbEventTarget with EventTarget as base class for Channel
+  - Rename the Channel class WebSocketMultiplexChannel for consistency
+  - Replace DumbEventTarget with EventTarget as base class for WebSocketMultiplexChannel
 
 0.03 2017-11-13
   - Use File::Share to move javascript files to share directory

@@ -19,8 +19,8 @@ class EventTarget {
     if (!(type in this.listeners)) {
       return;
     }
-    var stack = this.listeners[type];
-    for (var i = 0, l = stack.length; i < l; i++) {
+    let stack = this.listeners[type];
+    for (let i = 0, l = stack.length; i < l; i++) {
       if (stack[i] === callback){
         stack.splice(i, 1);
         return;
@@ -29,7 +29,7 @@ class EventTarget {
   }
 
   dispatchEvent(event) {
-    var type = event.type;
+    let type = event.type;
 
     // handle subscription via on attributes
     if(this['on' + type]) {
@@ -38,8 +38,8 @@ class EventTarget {
 
     // handle listeners added via addEventListener
     if (type in this.listeners) {
-      var stack = this.listeners[type];
-      for (var i = 0, l = stack.length; i < l; i++) {
+      let stack = this.listeners[type];
+      for (let i = 0, l = stack.length; i < l; i++) {
         stack[i].call(this, event);
       }
     }
@@ -72,7 +72,7 @@ class WebSocketMultiplexSubscriber extends EventTarget {
     this.addEventListener('message', (event) => {
       // JSON.parse is expensive if there are no subscribers
       if (!this.hasEventListeners('jsonmessage')) return;
-      var e = new MessageEvent('jsonmessage', { data: JSON.parse(event.data) });
+      let e = new MessageEvent('jsonmessage', { data: JSON.parse(event.data) });
       this.dispatchEvent(e);
     });
   }
@@ -136,7 +136,7 @@ class WebSocketMultiplexChannel {
   }
 
   subscriber() {
-    var subscriber = new WebSocketMultiplexSubscriber(this);
+    let subscriber = new WebSocketMultiplexSubscriber(this);
     this.subscribers.push(subscriber);
     if (this.subscribed) {
       window.setTimeout(() => { this.setSubscriberOpen(subscriber) }, 0);
@@ -161,15 +161,15 @@ class WebSocketMultiplexChannel {
   }
 
   eachSubscriber(cb) {
-    var stack = this.subscribers;
-    for (var i = 0, l = stack.length; i < l; i++) {
+    let stack = this.subscribers;
+    for (let i = 0, l = stack.length; i < l; i++) {
       cb.call(this, stack[i]);
     }
   }
 
   removeSubscriber(subscriber) {
-    var stack = this.subscribers;
-    for (var i = 0, l = stack.length; i < l; i++) {
+    let stack = this.subscribers;
+    for (let i = 0, l = stack.length; i < l; i++) {
       if (stack[i] === subscriber){
         stack.splice(i, 1);
         this.setSubscriberClosed(subscriber);
@@ -240,12 +240,12 @@ export default class WebSocketMultiplex {
     });
 
     this.ws.addEventListener('message', (e) => {
-      var t = e.data.split(',');
-      var type = t.shift(), name = t.shift(),  payload = t.join();
+      let t = e.data.split(',');
+      let type = t.shift(), name = t.shift(),  payload = t.join();
       if(!(name in this.channels)) {
         return;
       }
-      var channel = this.channels[name];
+      let channel = this.channels[name];
 
       switch(type) {
       case 'sta':
@@ -277,7 +277,7 @@ export default class WebSocketMultiplex {
   }
 
   eachChannel(cb) {
-    for (var channel in this.channels) {
+    for (let channel in this.channels) {
       if (this.channels.hasOwnProperty(channel)) {
         cb.call(this, this.channels[channel]);
       }
@@ -285,7 +285,7 @@ export default class WebSocketMultiplex {
   }
 
   channel(raw_name) {
-    var name = escape(raw_name);
+    let name = escape(raw_name);
     if (! this.channels[name] ) {
       this.channels[name] = new WebSocketMultiplexChannel(this, name);
       if (this.ws.readyState == WebSocket.OPEN) {

@@ -14,6 +14,12 @@ sub register {
 
   push @{ $app->static->paths }, File::Share::dist_dir('Mojolicious-Plugin-Multiplex');
 
+  # this is still a gray area it seems, but certainly this will be honored even
+  # if in the future they add some new preferred type
+  my $types = $app->types;
+  $types->type(mjs => ['application/javascript'])
+    unless exists $types->mapping->{mjs};
+
   $app->helper(multiplex => sub {
     my $c = shift;
     my $tx = $c->tx;
@@ -98,16 +104,16 @@ Though not prevented, the user is highly discouraged from sending other traffic 
 
 =head1 BUNDLED FILES
 
-=head2 websocket_multiplex.esm.js
+=head2 websocket_multiplex.mjs
 
   <script type="module">
-    import WebSocketMultiplex from '/websocket_multiplex.esm.js';
+    import WebSocketMultiplex from '/websocket_multiplex.mjs';
     var ws = new WebSocket(url);
     var multiplex = new WebSocketMultiplex(ws);
     var channel = multiplex.channel(topic);
   </script>
 
-Bundled with this plugin is a javascript module file called C<websocket_multiplex.esm.js> which contains the front-end code to create a multiplexer.
+Bundled with this plugin is a javascript module file called C<websocket_multiplex.mjs> which contains the front-end code to create a multiplexer.
 It exports the C<WebSocketMultiplex> class, whose constructor takes as its only argument an existing WebSocket object or a url string to build one.
 This then is used to open new channel objects via the C<channel> method which takes a topic string as an arugment.
 Topics can be almost any string, however they must not contain a comma (a limitation of the protocol).

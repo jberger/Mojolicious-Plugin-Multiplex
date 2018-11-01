@@ -51,7 +51,7 @@ __DATA__
 <p>Testing ...</p>
 
 <script type="module">
-  import WebSocketMultiplex from '/websocket_multiplex.esm.js';
+  import WebSocketMultiplex from '/websocket_multiplex.mjs';
 
   var url = '<%= url_for('socket')->to_abs %>' + '?original=1';
   var ws = new WebSocket(url);

@@ -6,7 +6,7 @@ const webpack = require('webpack');
 const path = require('path')
 
 module.exports = {
-  entry: './share/websocket_multiplex.esm.js',
+  entry: './share/websocket_multiplex.mjs',
   mode: 'production',
   //mode: 'development',
   devtool: 'source-map',

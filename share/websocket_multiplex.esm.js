@@ -16,16 +16,10 @@ class EventTarget {
   }
 
   removeEventListener(type, callback) {
-    if (!(type in this.listeners)) {
-      return;
-    }
-    let stack = this.listeners[type];
-    for (let i = 0, l = stack.length; i < l; i++) {
-      if (stack[i] === callback){
-        stack.splice(i, 1);
-        return;
-      }
-    }
+    let listeners = this.listeners[type];
+    if (!listeners) return;
+    let index = listeners.findIndex((cb) => cb === callback);
+    if (index >= 0) listeners.splice(index, 1);
   }
 
   dispatchEvent(event) {
@@ -162,17 +156,11 @@ class WebSocketMultiplexChannel {
   }
 
   removeSubscriber(subscriber) {
-    let stack = this.subscribers;
-    for (let i = 0, l = stack.length; i < l; i++) {
-      if (stack[i] === subscriber){
-        stack.splice(i, 1);
-        this.setSubscriberClosed(subscriber);
-        if (! stack.length) {
-          this.unsubscribe();
-        }
-        return;
-      }
-    }
+    let index = this.subscribers.findIndex((sub) => sub === subscriber);
+    if (index < 0) return;
+    this.subscribers.splice(index, 1);
+    this.setSubscriberClosed(subscriber);
+    if (! this.subscribers.length) this.unsubscribe();
   }
 
   send(data) {

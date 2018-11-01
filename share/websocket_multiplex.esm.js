@@ -38,10 +38,7 @@ class EventTarget {
 
     // handle listeners added via addEventListener
     if (type in this.listeners) {
-      let stack = this.listeners[type];
-      for (let i = 0, l = stack.length; i < l; i++) {
-        stack[i].call(this, event);
-      }
+      this.listeners[type].forEach((cb) => { cb.call(this, event) });
     }
 
     return !event.defaultPrevented;
@@ -161,10 +158,7 @@ class WebSocketMultiplexChannel {
   }
 
   eachSubscriber(cb) {
-    let stack = this.subscribers;
-    for (let i = 0, l = stack.length; i < l; i++) {
-      cb.call(this, stack[i]);
-    }
+    this.subscribers.forEach((sub) => { cb.call(this, sub) });
   }
 
   removeSubscriber(subscriber) {
@@ -277,11 +271,7 @@ export default class WebSocketMultiplex {
   }
 
   eachChannel(cb) {
-    for (let channel in this.channels) {
-      if (this.channels.hasOwnProperty(channel)) {
-        cb.call(this, this.channels[channel]);
-      }
-    }
+    Object.values(this.channels).forEach((channel) => { cb.call(this, channel) });
   }
 
   channel(raw_name) {

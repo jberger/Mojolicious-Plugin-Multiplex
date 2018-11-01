@@ -65,16 +65,15 @@ class WebSocketMultiplexSubscriber extends EventTarget {
 
   constructor(channel) {
     super();
-    var self = this;
-    self._channel   = channel;
-    self.readyState = WebSocket.CONNECTING;
+    this._channel   = channel;
+    this.readyState = WebSocket.CONNECTING;
 
     // add jsonmessage event, to save reparsing of json data, common to websockets
-    self.addEventListener('message', function(event) {
+    this.addEventListener('message', (event) => {
       // JSON.parse is expensive if there are no subscribers
-      if (!self.hasEventListeners('jsonmessage')) return;
+      if (!this.hasEventListeners('jsonmessage')) return;
       var e = new MessageEvent('jsonmessage', { data: JSON.parse(event.data) });
-      self.dispatchEvent(e);
+      this.dispatchEvent(e);
     });
   }
 
@@ -139,9 +138,8 @@ class WebSocketMultiplexChannel {
   subscriber() {
     var subscriber = new WebSocketMultiplexSubscriber(this);
     this.subscribers.push(subscriber);
-    var self = this;
     if (this.subscribed) {
-      window.setTimeout(function() { self.setSubscriberOpen(subscriber) }, 0);
+      window.setTimeout(() => { this.setSubscriberOpen(subscriber) }, 0);
     }
     return subscriber;
   }
@@ -220,35 +218,34 @@ export default class WebSocketMultiplex {
   set url (url) { this._url = url }
 
   open() {
-    var self = this;
-    self.closing = false;
+    this.closing = false;
 
-    if (!self.ws || self.ws.readyState > WebSocket.OPEN) {
-      self.ws = new WebSocket(self.url);
+    if (!this.ws || this.ws.readyState > WebSocket.OPEN) {
+      this.ws = new WebSocket(this.url);
     }
 
-    self.ws.addEventListener('open', function(e) {
-      self.eachChannel(function(channel) { channel.subscribe() });
+    this.ws.addEventListener('open', (e) => {
+      this.eachChannel((channel) => channel.subscribe());
     });
 
-    self.ws.addEventListener('close', function(e) {
-      self.eachChannel(function(channel) {
-        if (self.closing) {
+    this.ws.addEventListener('close', (e) => {
+      this.eachChannel((channel) => {
+        if (this.closing) {
           // handle true close
         } else {
           channel.setReconnecting();
         }
       });
-      window.setTimeout(function(){ self.open() }, 500);
+      window.setTimeout(() => { this.open() }, 500);
     });
 
-    self.ws.addEventListener('message', function(e) {
+    this.ws.addEventListener('message', (e) => {
       var t = e.data.split(',');
       var type = t.shift(), name = t.shift(),  payload = t.join();
-      if(!(name in self.channels)) {
+      if(!(name in this.channels)) {
         return;
       }
-      var channel = self.channels[name];
+      var channel = this.channels[name];
 
       switch(type) {
       case 'sta':
@@ -256,13 +253,13 @@ export default class WebSocketMultiplex {
           channel.setSubscribed();
         } else if (payload === 'false') {
           channel.setUnsubscribed();
-          delete self.channels[name];
+          delete this.channels[name];
         }
         //TODO implement status request handler
         break;
       case 'uns':
         channel.setUnsubscribed();
-        delete self.channels[name];
+        delete this.channels[name];
         break;
       case 'msg':
         channel.receiveMessage(payload);

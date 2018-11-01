@@ -1,4 +1,6 @@
-// npm install --save-dev webpack webpack-cli
+// To build run:
+// $ npm install --save-dev webpack webpack-cli babel-loader @babel/core @babel/preset-env
+// $ ./node_modules/.bin/webpack
 
 const webpack = require('webpack');
 const path = require('path')
@@ -15,4 +17,18 @@ module.exports = {
     libraryTarget: 'var',
     libraryExport: 'default',
   },
+  module: {
+    rules: [
+      {
+        test: /\.m?js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+          }
+        }
+      }
+    ]
+  }
 };

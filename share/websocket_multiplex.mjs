@@ -1,7 +1,7 @@
 // inspired by and forked from https://github.com/sockjs/websocket-multiplex/blob/master/multiplex_client.js
 
-  // EventTarget implementation taken (mostly) from
-  // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget
+// EventTarget implementation taken (mostly) from
+// https://developer.mozilla.org/en-US/docs/Web/API/EventTarget
 class EventTarget {
 
   constructor () {
@@ -18,7 +18,7 @@ class EventTarget {
   removeEventListener(type, callback) {
     let listeners = this.listeners[type];
     if (!listeners) return;
-    let index = listeners.findIndex((cb) => cb === callback);
+    let index = listeners.findIndex(cb => cb === callback);
     if (index >= 0) listeners.splice(index, 1);
   }
 
@@ -32,7 +32,7 @@ class EventTarget {
 
     // handle listeners added via addEventListener
     if (type in this.listeners) {
-      this.listeners[type].forEach((cb) => { cb.call(this, event) });
+      this.listeners[type].forEach(cb => cb.call(this, event));
     }
 
     return !event.defaultPrevented;
@@ -43,7 +43,7 @@ class EventTarget {
       return true;
     }
 
-    if ((type in this.listeners) && (this.listeners[type].length)) {
+    if (type in this.listeners && this.listeners[type].length) {
       return true;
     }
 
@@ -60,7 +60,7 @@ class WebSocketMultiplexSubscriber extends EventTarget {
     this.readyState = WebSocket.CONNECTING;
 
     // add jsonmessage event, to save reparsing of json data, common to websockets
-    this.addEventListener('message', (event) => {
+    this.addEventListener('message', event => {
       // JSON.parse is expensive if there are no subscribers
       if (!this.hasEventListeners('jsonmessage')) return;
       let e = new MessageEvent('jsonmessage', { data: JSON.parse(event.data) });
@@ -120,7 +120,7 @@ class WebSocketMultiplexChannel {
   setReconnecting() {
     this.reconnecting = true;
     this.subscribed   = false;
-    this.eachSubscriber(function(subscriber) {
+    this.eachSubscriber(subscriber => {
       subscriber.readyState = WebSocket.CONNECTING;
       subscriber.dispatchEvent(new CustomEvent('reconnecting'));
     });
@@ -152,11 +152,11 @@ class WebSocketMultiplexChannel {
   }
 
   eachSubscriber(cb) {
-    this.subscribers.forEach((sub) => { cb.call(this, sub) });
+    this.subscribers.forEach(s => cb.call(this, s));
   }
 
   removeSubscriber(subscriber) {
-    let index = this.subscribers.findIndex((sub) => sub === subscriber);
+    let index = this.subscribers.findIndex(s => s === subscriber);
     if (index < 0) return;
     this.subscribers.splice(index, 1);
     this.setSubscriberClosed(subscriber);
@@ -168,16 +168,12 @@ class WebSocketMultiplexChannel {
   }
 
   receiveMessage(payload) {
-    this.eachSubscriber(function(subscriber) {
-      subscriber.dispatchEvent(new MessageEvent('message', {data: payload}));
-    });
+    this.eachSubscriber(s => s.dispatchEvent(new MessageEvent('message', {data: payload})));
   }
 
   receiveError(payload) {
-    this.eachSubscriber(function(subscriber) {
-      // this deviates from the WebSocket spec to include error detail
-      subscriber.dispatchEvent(new CustomEvent('error', {detail: payload}));
-    });
+    // this deviates from the WebSocket spec to include error detail
+    this.eachSubscriber(s => s.dispatchEvent(new CustomEvent('error', {detail: payload})));
   }
 
 }
@@ -206,49 +202,52 @@ export default class WebSocketMultiplex {
       this.ws = new WebSocket(this.url);
     }
 
-    this.ws.addEventListener('open', (e) => {
-      this.eachChannel((channel) => channel.subscribe());
+    this.ws.addEventListener('open', e => {
+      this.eachChannel(channel => channel.subscribe());
     });
 
-    this.ws.addEventListener('close', (e) => {
-      this.eachChannel((channel) => {
+    this.ws.addEventListener('close', e => {
+      this.eachChannel(channel => {
         if (this.closing) {
-          // handle true close
+          //TODO handle true close
         } else {
           channel.setReconnecting();
         }
       });
+
+      // can't use window.setTimeout(this.open, 500) because we're defining the open method
       window.setTimeout(() => { this.open() }, 500);
     });
 
-    this.ws.addEventListener('message', (e) => {
+    this.ws.addEventListener('message', e => {
       let t = e.data.split(',');
-      let type = t.shift(), name = t.shift(),  payload = t.join();
-      if(!(name in this.channels)) {
-        return;
-      }
+      let type = t.shift(),
+          name = t.shift(),
+          payload = t.join();
+
+      if(!(name in this.channels)) return;
       let channel = this.channels[name];
 
       switch(type) {
-      case 'sta':
-        if (payload === 'true') {
-          channel.setSubscribed();
-        } else if (payload === 'false') {
+        case 'sta':
+          if (payload === 'true') {
+            channel.setSubscribed();
+          } else if (payload === 'false') {
+            channel.setUnsubscribed();
+            delete this.channels[name];
+          }
+          //TODO implement status request handler
+          break;
+        case 'uns':
           channel.setUnsubscribed();
           delete this.channels[name];
-        }
-        //TODO implement status request handler
-        break;
-      case 'uns':
-        channel.setUnsubscribed();
-        delete this.channels[name];
-        break;
-      case 'msg':
-        channel.receiveMessage(payload);
-        break;
-      case 'err':
-        channel.receiveError(payload);
-        break;
+          break;
+        case 'msg':
+          channel.receiveMessage(payload);
+          break;
+        case 'err':
+          channel.receiveError(payload);
+          break;
       }
     });
   }

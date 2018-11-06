@@ -14,6 +14,12 @@ sub register {
 
   push @{ $app->static->paths }, File::Share::dist_dir('Mojolicious-Plugin-Multiplex');
 
+  # this is still a gray area it seems, but certainly this will be honored even
+  # if in the future they add some new preferred type
+  my $types = $app->types;
+  $types->type(mjs => ['application/javascript'])
+    unless exists $types->mapping->{mjs};
+
   $app->helper(multiplex => sub {
     my $c = shift;
     my $tx = $c->tx;
@@ -98,17 +104,17 @@ Though not prevented, the user is highly discouraged from sending other traffic 
 
 =head1 BUNDLED FILES
 
-=head2 websocket_multiplex.js
+=head2 websocket_multiplex.mjs
 
-  # in your template
-  %= javascript 'websocket_multiplex.js';
+  <script type="module">
+    import WebSocketMultiplex from '/websocket_multiplex.mjs';
+    var ws = new WebSocket(url);
+    var multiplex = new WebSocketMultiplex(ws);
+    var channel = multiplex.channel(topic);
+  </script>
 
-  var ws = new WebSocket(url);
-  var multiplex = new WebSocketMultiplex(ws);
-  var channel = multiplex.channel(topic);
-
-Bundled with this plugin is a javascript file which provides the front-end code to create a multiplexer entitled C<websocket_multiplex.js>.
-It provides the new class C<WebSocketMultiplex> whose constructor takes as its only argument an existing WebSocket object.
+Bundled with this plugin is a javascript module file called C<websocket_multiplex.mjs> which contains the front-end code to create a multiplexer.
+It exports the C<WebSocketMultiplex> class, whose constructor takes as its only argument an existing WebSocket object or a url string to build one.
 This then is used to open new channel objects via the C<channel> method which takes a topic string as an arugment.
 Topics can be almost any string, however they must not contain a comma (a limitation of the protocol).
 The resulting channel objects implement the same API as a WebSocket (though they do not inherit from it).
@@ -117,6 +123,27 @@ The client-side multiplexer will also attempt to reconnect to closed sockets and
 
 N.B. This library is the least stable of the entire project.
 Use with caution.
+
+Also, this library will likely use very modern conventions, even going forward.
+Older browsers are not the target for this file.
+For those you want ...
+
+=head2 websocket_multiplex.js
+
+  <script src="websocket_multiplex.js"></script>
+  <script>
+    var ws = new WebSocket(url);
+    var multiplex = new WebSocketMultiplex(ws);
+    var channel = multiplex.channel(topic);
+  </script>
+
+This is the above javascript module but transpiled back to work on older browsers (and minified).
+It sets the global symbol C<WebSocketMultiplex> when loaded.
+In all other ways it works just like the above file.
+
+=head2 websocket_multiplex.js.map
+
+A file used to get better diagnostics from the minified javascript file.
 
 =head1 SOURCE REPOSITORY
 

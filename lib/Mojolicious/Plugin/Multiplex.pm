@@ -2,7 +2,7 @@ package Mojolicious::Plugin::Multiplex;
 
 use Mojo::Base 'Mojolicious::Plugin';
 
-our $VERSION = '0.06';
+our $VERSION = '1.0';
 $VERSION = eval $VERSION;
 
 use Mojolicious::Plugin::Multiplex::Multiplexer;
@@ -65,11 +65,6 @@ Mojolicious::Plugin::Multiplex - A websocket multiplexing layer for Mojolicious 
     bar.onmessage = function (e) { console.log('bar channel got: ' + e.data) };
   </script>
 
-=head1 CAUTION
-
-This module is in its infancy and things can and will change in incompatible ways until this warning is removed.
-That said, the author is using it for real work so hopefully incompatible changes will be minimal (for his own sanity).
-
 =head1 DESCRIPTION
 
 L<Mojolicious::Plugin::Multiplex> implements a mechanism proposed by L<SockJS|https://github.com/sockjs/websocket-multiplex> for the multiplexing of data on a single websocket.
@@ -88,6 +83,14 @@ Another might be to stream updates to multiple types of data (perhaps in multipl
 
 For reference, the distribution comes with an example which uses L<Mojo::Pg> as a message broker for a multi-channel chat application.
 The example may also be seen on L<GitHub|https://github.com/jberger/Mojolicious-Plugin-Multiplex/blob/master/ex/vue_chat.pl>.
+
+=head1 CAVEAT
+
+While I'm declaring this module stable and production worthy, I still don't nearly have enough tests.
+The biggest reason for this is that I don't have a great way to test Perl and Javascript together.
+Unfortunately PhantomJS declared defeat right as L<Mojo::Phantom> was catching on.
+A project to wrap its successor, headless Chrome, is stalled waiting for now, so we wait.
+Contributions from people with experience in this area would be greatly appreciated.
 
 =head1 HELPERS
 
@@ -153,9 +156,13 @@ L<http://github.com/jberger/Mojolicious-Plugin-Multiplex>
 
 Joel Berger, E<lt>joel.a.berger@gmail.comE<gt>
 
+=head1 ADDITIONAL THANKS
+
+John Susek
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2016 by Joel Berger
+Copyright (C) 2016-2018 by Joel Berger
 
 This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 

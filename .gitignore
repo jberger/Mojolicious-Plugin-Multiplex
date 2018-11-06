@@ -5,3 +5,4 @@ MANIFEST.SKIP.bak
 META.*
 README
 Mojolicious-Plugin-Multiplex-*.tar.gz
+node_modules/
